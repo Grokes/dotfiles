@@ -16,7 +16,7 @@ function M.save_file(filename)
     
     local name = filename 
     if name == "" then
-        name = vim.fn.input("File name: ", "untitled.txt")
+        name = vim.fn.input("File name: ")
     end
     
     if name ~= "" then
