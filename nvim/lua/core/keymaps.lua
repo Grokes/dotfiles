@@ -13,7 +13,7 @@ vim.keymap.set("i", "jk", "<esc>")
 --Save and quit
 vim.keymap.set('n', '<leader>w', ':w<CR>')
 vim.keymap.set('n', '<leader>q', ':q!<CR>')
-vim.keymap.set('n', '<leader>x', ':wq<CR>')
+--vim.keymap.set('n', '<leader>x', ':wq<CR>')
 
 --Save default dir 
 vim.keymap.set("n", "<leader>sd", ':SaveDefault<CR>',
