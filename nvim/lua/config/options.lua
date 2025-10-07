@@ -18,5 +18,8 @@ vim.opt.expandtab = true
 vim.opt.softtabstop = 2
 vim.opt.smartindent = true
 
---Scripts
-require('scripts.highlighted_yank')
+--Find
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+vim.opt.hlsearch = true
+vim.opt.incsearch = true
