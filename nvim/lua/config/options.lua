@@ -4,9 +4,9 @@ vim.opt.mousefocus = true
 
 --Line Numbers
 vim.opt.number = true
-vim.opt.relativenumber = true
+-- vim.opt.relativenumber = true
 vim.wo.number = true
-vim.wo.relativenumber = true
+-- vim.wo.relativenumber = true
 
 --ClipBoard
 vim.opt.clipboard = "unnamedplus"

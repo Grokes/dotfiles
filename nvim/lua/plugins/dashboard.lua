@@ -72,6 +72,7 @@ return {
         }
       }
     })
+    vim.api.nvim_set_hl(0, 'DashboardHeader', {link = "Function" })
   end,
   dependencies = { {'nvim-tree/nvim-web-devicons'}}
 }
