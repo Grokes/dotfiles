@@ -1,6 +1,7 @@
 return {
-  'nvim-telescope/telescope.nvim', tag = '0.1.8',
-  config = function()
+  'nvim-telescope/telescope.nvim', tag = 'v0.2.0',
+  dependencies = { 'nvim-lua/plenary.nvim' },
+    config = function()
     require('telescope').setup({
       defaults ={
         hidden = true,
@@ -23,5 +24,4 @@ return {
     })
     require("telescope").load_extension "file_browser"
   end,
-  dependencies = { 'nvim-lua/plenary.nvim' }
 }
