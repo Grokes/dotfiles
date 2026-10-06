@@ -26,7 +26,7 @@ conky.config = {
     font = 'Cascadia Mono:size=11',
     gap_x = 10,
     gap_y = 40,
-    minimum_height = 180,
+    minimum_height = 130,
     minimum_width = 250,
     net_avg_samples = 2,
     no_buffers = true,
@@ -38,7 +38,10 @@ conky.config = {
     own_window_type = 'desktop',
     own_window_hints ='undecorated,sticky,skip_taskbar,skip_pager,below',
     own_window_class = 'Conky',
-    own_window_colour = '#b423262b',
+    own_window_argb_visual = true,
+    own_window_transparent = false,
+    own_window_colour = '#23262b',
+    own_window_argb_value = 180,
     show_graph_range = false,
     show_graph_scale = false,
     stippled_borders = 0,
@@ -53,38 +56,37 @@ conky.text = [[
 # OS
 ${color1}${font ConkySymbols:size=20}t${font}${voffset -10}Arch» $hr ${color}
 ${color1}${voffset 15}${goto 35}Kernel: ${alignr}${color}$kernel
-# ${color1}${goto 35}Uptime: ${alignr}${color}$uptime_short
-# ${color1}${goto 35}Lifetime: ${alignr}${color}${execi 86400 birth_install=$(stat -c %W /); current=$(date +%s); time_progression=$((current - birth_install)); days_difference=$((time_progression / 86400)); echo "$days_difference days"}
+${color1}${goto 35}Uptime: ${alignr}${color}$uptime_short
+${color1}${goto 35}Lifetime: ${alignr}${color}${execi 86400 birth_install=$(stat -c %W /); current=$(date +%s); time_progression=$((current - birth_install)); days_difference=$((time_progression / 86400)); echo "$days_difference days"}
 ${color1}${goto 35}GPU Status: ${alignr}${color}${execi 86400 supergfxctl -g}
-#
+
 # Packages
-${voffset 10}${color1}Packages ${hr}${color}
+${color1}Packages ${hr}${color}
 ${voffset 5}${color1}${goto 35}Arch: ${color}${execi 300 pacman -Qqe | wc -l}    ${color1}${goto 130}Updates: ${color}${execi 300 checkupdates | wc -l} ${color1}${alignr}Dependecies: ${color}${execi 300 pacman -Qqd | wc -l}
 ${color1}${goto 35}AUR : ${color}${execi 300 pacman -Qqm | wc -l}    ${color1}${goto 130}Updates: ${color}${execi 300 paru -Qu | wc -l} ${color1}${alignr}All: ${color}${execi 300 pacman -Qq | wc -l}
 
-# #Wireless
-# ${color1}${font ConkySymbols:size=16}g${font} ${voffset -10}Wireless» $hr${color}
-# ${voffset 5}${color1}${goto 35}SSID: ${color}${alignr}${wireless_essid wlp45s0}
-# # ${color1}${goto 35}VPN:${if_up throne-tun}${alignr}${color green}Active${else}${alignr}${color red}Inactive${endif}
-# # ${color1}${goto 35}Proxy:${if_match "${execi 10 ss -tuln | grep ':20173' | wc -l}" != "0"}${alignr}${color green}Active${else}${alignr}${color red}Inactive${endif}
-# ${color1}${goto 35}IP: ${color}${alignr}${execi 60 wget -qO- eth0.me}
-# ${color1}${goto 35}Local IP: ${color}${alignr}${execi 60 ip -4 a show wlp45s0 | grep "inet " | awk '{print $2}' | cut -d/ -f1}
-# ${voffset 10}${goto 35}${color1}download: ${color}${lua conky_downloadspeed} mbps ${alignr}${color1}upload: ${color}${lua conky_uploadspeed} mbps
-# # ${color}${goto 35}${downspeedgraph wlp45s0 40,150 ${color}}${alignr}${upspeedgraph wlp45s0 40,150 ${color}}
-#
-# # CPU
-# ${color1}${voffset -10}CPU $hr${color}
+#Wireless
+${color1}${font ConkySymbols:size=16}g${font} ${voffset -10}Wireless» $hr${color}
+${voffset 5}${color1}${goto 35}SSID: ${color}${alignr}${wireless_essid wlp45s0}
+# ${color1}${goto 35}VPN:${if_up throne-tun}${alignr}${color green}Active${else}${alignr}${color red}Inactive${endif}
+# ${color1}${goto 35}Proxy:${if_match "${execi 10 ss -tuln | grep ':20173' | wc -l}" != "0"}${alignr}${color green}Active${else}${alignr}${color red}Inactive${endif}
+${color1}${goto 35}IP: ${color}${alignr}${execi 60 wget -qO- eth0.me}
+${color1}${goto 35}Local IP: ${color}${alignr}${execi 60 ip -4 a show wlp45s0 | grep "inet " | awk '{print $2}' | cut -d/ -f1}
+${voffset 10}${goto 35}${color1}Download: ${color}${lua conky_downloadspeed} Mbps ${alignr}${color1}Upload: ${color}${lua conky_uploadspeed} Mbps
+# ${color}${goto 35}${downspeedgraph wlp45s0 40,150 ${color}}${alignr}${upspeedgraph wlp45s0 40,150 ${color}}
+
+# CPU
+${color1}${voffset -10}CPU $hr${color}
 ${voffset 10}${goto 295}${cpu cpu0}%
 ${goto 295}${exec grep "MHz" /proc/cpuinfo | head -n1 | awk '{printf "%.2f GHz", $4/1000}'} 
-${goto 295}${execp sensors | grep "Package" | awk '{t=$4; gsub(/[+°C]/,"",t); c=(t>=80?"red":t>=65?"yellow":"green"); printf "${color %s}%s°C",c,t}'}
-${goto 295}${execp sensors | grep "cpu_fan" | awk '{r=$2; c=(r>=3500?"red":r>=3000?"yellow":"green"); printf "${color %s}%s RPM",c,r}'} 
+${goto 295}${color}${exec sensors | grep "Package" | awk '{print $4}'| sed 's/+//;'} 
+${goto 295}${color}${exec sensors | grep "cpu_fan" | awk '{print $2}'} RPM
 ${voffset -80}${goto 35}${color}${cpugraph 70,250}
 ${goto 35}${top name 1} ${alignr}${color}${top cpu 1}%
 ${goto 35}${top name 2} ${alignr}${color}${top cpu 2}%
 ${goto 35}${top name 3} ${alignr}${color}${top cpu 3}%
 ${goto 35}${top name 4} ${alignr}${color}${top cpu 4}%
 ${goto 35}${top name 5} ${alignr}${color}${top cpu 5}%
-${voffset 10}${goto 35}${color1}download: ${color}${lua conky_downloadspeed} mbps ${alignr}${color1}upload: ${color}${lua conky_uploadspeed} mbps
 
 #Memory
 ${color1}${font ConkySymbols:size=16}J${font} ${voffset -10}Memory» $hr${color}
@@ -100,5 +102,6 @@ ${goto 35}${top_mem name 5}  ${alignr}${top_mem mem_res 5}
 ${color1}${font ConkySymbols:size=16}k${font} ${voffset -10}Storage» $hr${color}
 ${voffset 5}${color1}${goto 35}ROOT : ${color}${fs_used /}/${fs_size /} ${alignr}${fs_used_perc /}% ${fs_bar 4,100 /}
 ${color1}${goto 35}Games: ${color}${fs_used /mnt/Games}/${fs_size /mnt/Games} ${alignr}${fs_used_perc /mnt/Games}% ${fs_bar 4,100 /mnt/Games}
+${voffset -80}
 
 ]]

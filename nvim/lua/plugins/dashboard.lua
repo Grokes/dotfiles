@@ -57,6 +57,15 @@ return {
             action = 'Lazy'
           },
           {
+            icon = ' ',
+            icon_hl = 'Title',
+            desc = 'Settings',
+            desc_hl = 'String',
+            key = 's',
+            key_hl = 'Number',
+            action = 'Neotree ~/repos/dotfiles/nvim'
+          },
+          {
             icon = ' ',
             icon_hl = 'Title',
             desc = 'Quit',
