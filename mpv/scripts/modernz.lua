@@ -276,6 +276,11 @@ local user_opts = {
     -- Mouse commands
     -- customize the button function based on mouse action
 
+    -- Dragging behaviour
+    video_drag_mbtn_left = true,            -- drag video with LMB using video-pan-x/video-pan-y on non-interactive areas
+    window_title_drag = true,               -- drag the mpv window by the ModernZ top title bar
+    disable_builtin_window_drag = true,      -- prevent normal LMB from dragging the window everywhere
+
     -- title above seekbar mouse actions
     title_mbtn_left_command = "script-binding stats/display-page-5",
     title_mbtn_mid_command = "show-text ${path}",
@@ -632,6 +637,12 @@ local state = {
     marginsREQ = false,                     -- is a margins update pending?
     last_mouseX = nil, last_mouseY = nil,   -- last mouse position, to detect significant mouse movement
     mouse_in_window = false,
+    video_pan_dragging = false,
+    video_pan_mouse_x = 0,
+    video_pan_mouse_y = 0,
+    video_pan_start_x = 0,
+    video_pan_start_y = 0,
+    video_pan_dims = nil,
     fullscreen = false,
     tick_timer = nil,
     tick_last_time = 0,                     -- when the last tick() was run
@@ -4260,6 +4271,55 @@ local function element_has_action(element, action)
         element.eventresponder[action]
 end
 
+local function stop_video_pan()
+    state.video_pan_dragging = false
+end
+
+local function update_video_pan()
+    if not state.video_pan_dragging or not state.video_pan_dims then
+        return
+    end
+
+    local mouse_pos = mp.get_property_native("mouse-pos")
+    if not mouse_pos then
+        return
+    end
+
+    local dims = state.video_pan_dims
+    local video_w = (dims.w or 0) - (dims.ml or 0) - (dims.mr or 0)
+    local video_h = (dims.h or 0) - (dims.mt or 0) - (dims.mb or 0)
+
+    if video_w ~= 0 then
+        local dx = mouse_pos.x - state.video_pan_mouse_x
+        mp.set_property_number("video-pan-x", state.video_pan_start_x + dx / video_w)
+    end
+
+    if video_h ~= 0 then
+        local dy = mouse_pos.y - state.video_pan_mouse_y
+        mp.set_property_number("video-pan-y", state.video_pan_start_y + dy / video_h)
+    end
+end
+
+local function start_video_pan()
+    if not user_opts.video_drag_mbtn_left or not is_video_playing() then
+        return
+    end
+
+    local dims = mp.get_property_native("osd-dimensions")
+    local mouse_pos = mp.get_property_native("mouse-pos")
+    if not dims or not mouse_pos then
+        return
+    end
+
+    stop_video_pan()
+    state.video_pan_dragging = true
+    state.video_pan_dims = dims
+    state.video_pan_mouse_x = mouse_pos.x
+    state.video_pan_mouse_y = mouse_pos.y
+    state.video_pan_start_x = mp.get_property_number("video-pan-x", 0)
+    state.video_pan_start_y = mp.get_property_number("video-pan-y", 0)
+end
+
 local function process_event(source, what)
     local action = string.format("%s%s", source,
         what and ("_" .. what) or "")
@@ -4267,12 +4327,14 @@ local function process_event(source, what)
     if what == "down" or what == "press" then
         reset_timeout() -- clicking resets the hideosc timer
 
+        local handled_by_element = false
         for n = 1, #elements do
             if mouse_hit(elements[n]) and
                 elements[n].eventresponder and
                 (elements[n].eventresponder[source .. "_up"] or
                     elements[n].eventresponder[action]) then
 
+                handled_by_element = true
                 if what == "down" then
                     state.active_element = n
                     state.active_event_source = source
@@ -4283,7 +4345,17 @@ local function process_event(source, what)
                 end
             end
         end
+
+        -- ModernZ owns MBTN_LEFT with a forced input section while the pointer
+        -- is over the OSC. If no interactive element handled the click, pan
+        -- the video instead of swallowing the event.
+        if source == "mbtn_left" and what == "down" and not handled_by_element then
+            start_video_pan()
+        end
     elseif what == "up" then
+        if source == "mbtn_left" then
+            stop_video_pan()
+        end
         if elements[state.active_element] then
             local n = state.active_element
 
@@ -4304,6 +4376,10 @@ local function process_event(source, what)
         state.mouse_down_counter = 0
     elseif source == "mouse_move" then
         state.mouse_in_window = true
+
+        -- Reuse ModernZ's existing full-window forced mouse-move handler for
+        -- video panning. This avoids competing MOUSE_MOVE bindings.
+        update_video_pan()
 
         local mouseX, mouseY = get_virt_mouse_pos()
         if user_opts.minmousemove == 0 or
@@ -5070,6 +5146,31 @@ mp.set_key_bindings({
 }, "window-controls", "force")
 mp.enable_key_bindings("window-controls")
 
+-- Drag the window only from the ModernZ top title area. The explicit mpv
+-- command works even when normal global window dragging is disabled.
+mp.set_key_bindings({
+    {"mbtn_left",
+        function() end,
+        function()
+            if user_opts.window_title_drag and not state.fullscreen then
+                stop_video_pan()
+                mp.command("begin-vo-dragging")
+            end
+        end},
+}, "window-controls-title", "force")
+
+-- Expose a complex script binding for input.conf. Using a nil key here is
+-- intentional: a normal mp.add_key_binding("MBTN_LEFT", ...) is weak and can
+-- lose to mpv/default/user bindings. Bind it explicitly in input.conf as:
+--   MBTN_LEFT script-binding modernz/video-pan
+mp.add_key_binding(nil, "video-pan", function(event)
+    if event.event == "down" then
+        start_video_pan()
+    elseif event.event == "up" then
+        stop_video_pan()
+    end
+end, {complex = true})
+
 local function always_on(val)
     if state.enabled then
         if val then
@@ -5422,8 +5523,19 @@ local function start_live_reload()
     config_mtime = get_modernz_conf_mtime() or config_mtime
 end
 
+local original_input_dragging_deadzone = mp.get_property_number("input-dragging-deadzone", 3)
+
 local function apply_user_opts(changed, force)
     validate_user_opts()
+
+    if user_opts.disable_builtin_window_drag then
+        -- Free plain MBTN_LEFT for video panning everywhere except the title
+        -- bar, where begin-vo-dragging is invoked explicitly.
+        mp.set_property_number("input-dragging-deadzone", 99999)
+    else
+        mp.set_property_number("input-dragging-deadzone", original_input_dragging_deadzone)
+    end
+
     set_osc_locale()
     set_icon_theme()
     set_osc_styles()
